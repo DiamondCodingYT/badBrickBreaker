@@ -145,6 +145,12 @@ public class GameScreen extends Screen {
 
         //ball
         ball.updateLoc(deltaS);
+        if(debugMode) {
+            double predictedX = ball.x + ball.vx * 0.5D;
+            double predictedY = ball.y + ball.vy * 0.5D;
+            g.setColor(Color.blue);
+            g.drawLine((int)ball.x+ball.width/2, (int)ball.y+ball.height/2, (int)predictedX+ball.width/2, (int)predictedY+ball.height/2);
+        }
         if(redTime > 0) {
             g.setColor(Color.red);
             redTime = Math.max(0.0D, redTime-deltaS);
