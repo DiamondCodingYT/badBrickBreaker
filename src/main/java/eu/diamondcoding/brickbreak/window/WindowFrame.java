@@ -57,6 +57,7 @@ public class WindowFrame extends JFrame {
                 if(e.getKeyCode() == KeyEvent.VK_RIGHT) {
                     //something idk...
                 }
+                holderComponent.handleKeyPress(e.getKeyCode());
             }
             @Override
             public void keyReleased(KeyEvent e) {}

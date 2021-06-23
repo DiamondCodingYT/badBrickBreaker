@@ -22,7 +22,12 @@ public abstract class Screen {
         }
     }
 
+    public void handleKeyPress(int keyCode) {
+        onKeyPress(keyCode);
+    }
+
     public void onClick(Point mousePoint) {}
+    public void onKeyPress(int keyCode) {}
 
     public void paint(double deltaS, Dimension dimension, Point mousePoint, Graphics g) {
         draw(deltaS, dimension, mousePoint, g);

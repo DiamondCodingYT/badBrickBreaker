@@ -22,6 +22,10 @@ public class SceneHolderComponent extends JComponent {
         activeScene.handleClick(getMousePosition());
     }
 
+    public void handleKeyPress(int keyCode) {
+        activeScene.handleKeyPress(keyCode);
+    }
+
     @Override
     public Dimension getMinimumSize() {
         return new Dimension(500, 650);

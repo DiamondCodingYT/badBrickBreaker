@@ -1,14 +1,11 @@
 package eu.diamondcoding.brickbreak.window.game;
 
-public class Ball {
+public class Ball extends CollideBox {
 
-    int diameter = 15;
-    double x, y;
     double vx, vy;
 
     public Ball(double x, double y, double vx, double vy) {
-        this.x = x;
-        this.y = y;
+        super(x, y, 15, 15);
         this.vx = vx;
         this.vy = vy;
     }
