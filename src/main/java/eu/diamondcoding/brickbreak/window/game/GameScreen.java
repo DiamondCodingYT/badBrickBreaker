@@ -109,8 +109,8 @@ public class GameScreen extends Screen {
             }
         }
         if(divertDirection) {
-            ball.vx*=-1;
-            ball.vy*=-1;
+            ball.vx *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
+            ball.vy *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
         }
         bricks.removeAll(bricksToRemove);
         //test win
