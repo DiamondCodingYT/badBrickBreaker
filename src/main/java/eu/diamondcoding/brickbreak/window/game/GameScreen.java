@@ -38,7 +38,11 @@ public class GameScreen extends Screen {
                 debugMode = true;
             }
         } else {
-            debugSequencePosition = 0;
+            if(keyCode == DEBUG_SEQUENCE[0]) {
+                debugSequencePosition = 1;
+            } else {
+                debugSequencePosition = 0;
+            }
         }
         if(debugMode) {
             if(keyCode == KeyEvent.VK_I) {
