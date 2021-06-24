@@ -20,7 +20,8 @@ public class Collectable extends CollideBox {
         SMALLER_PADDLE,
         RED_MODE,
         TRIPPLE_BALLS,
-        SPAWN_NEW_BALLS
+        SPAWN_NEW_BALLS,
+        SHOOTER
     }
 
     private CollectableType randomCollectableType() {

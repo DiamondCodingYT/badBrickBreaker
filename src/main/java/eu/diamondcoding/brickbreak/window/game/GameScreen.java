@@ -13,10 +13,13 @@ import java.util.Set;
 public class GameScreen extends Screen {
 
     List<Ball> balls;
+    List<Bullet> bullets;
     Paddle paddle;
     List<Brick> bricks;
     List<Collectable> collectables;
     double redTime = 0.0D;
+    double shooterTimer = 0.0D;
+    double bulletDelay = 0.0D;
     //debug stuff
     private static boolean invincible = false;
     private static double speedMultiplier = 1.0D;
@@ -35,6 +38,8 @@ public class GameScreen extends Screen {
         bricks = LevelConstructor.constructLevel(level);
         //init collectables
         collectables = new ArrayList<>();
+        //init bullets
+        bullets = new ArrayList<>();
     }
 
     @Override
@@ -106,7 +111,7 @@ public class GameScreen extends Screen {
                     double maxRndVal = 0.6D / (1.5D*collectables.size()+1.0D);
                     if(Math.random() < maxRndVal) {
                         Collectable collectable = new Collectable(brick.x + brick.width / 2.0D - 10, brick.y + brick.height / 2.0D);
-                        if(!(collectable.type.equals(Collectable.CollectableType.TRIPPLE_BALLS) && balls.size() >= 15)) { //this would be too many balls
+                        if(!(collectable.type.equals(Collectable.CollectableType.TRIPPLE_BALLS) && balls.size() >= 5)) { //this would be too many balls
                             collectables.add(collectable);
                         }
                     }
@@ -165,6 +170,15 @@ public class GameScreen extends Screen {
                     g.drawOval((int) colabl.x, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
                     g.drawOval((int) colabl.x+colabl.width/3, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
                     g.drawOval((int) colabl.x+(colabl.width/3)*2, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
+                }
+                case SHOOTER -> {
+                    g.setColor(Color.white);
+                    //left shooter
+                    g.drawRect((int) colabl.x, (int) colabl.y+4*(colabl.height/6), colabl.width/6, colabl.height/6);
+                    //right shooter
+                    g.drawRect((int) colabl.x+5*(colabl.height/6), (int) colabl.y+4*(colabl.height/6), colabl.width/6, colabl.height/6);
+                    //paddle
+                    g.drawRect((int) colabl.x, (int) colabl.y+5*(colabl.height/6), colabl.width, colabl.height/6);
                 }
             }
             if(collides(paddle, colabl)) {
@@ -229,10 +243,49 @@ public class GameScreen extends Screen {
             holder.displayScreen(new MenuScreen(MenuScreen.MenuMessage.GAME_OVER));
             return; //no need to continue rendering this frame
         }
+        
+        //bullets
+        bricksToRemove.clear();
+        List<Bullet> bulletsToRemove = new ArrayList<>();
+        for (Bullet bullet : bullets) {
+            //draw bullet
+            bullet.updateLoc(deltaS);
+            g.setColor(Color.white);
+            g.fillRect((int)bullet.x, (int)bullet.y, bullet.width, bullet.height);
+            if(bullet.y <= 0.0D) { //is the bullet out of frame
+                bulletsToRemove.add(bullet);
+            } else {
+                //find a colliding brick
+                for (Brick brick : bricks) {
+                    if (collides(brick, bullet)) {
+                        bulletsToRemove.add(bullet);
+                        bricksToRemove.add(brick);
+                        break;
+                    }
+                }
+            }
+        }
+        bricks.removeAll(bricksToRemove);
+        bullets.removeAll(bulletsToRemove);
+        //test win
+        if(!bricksToRemove.isEmpty()) {
+            checkWin();
+        }
 
         //paddle
         g.setColor(Color.white);
         g.fillRect((int)paddle.x, (int)paddle.y, paddle.width, 10);
+        if(shooterTimer > 0.0D) {
+            shooterTimer -= deltaS;
+            g.fillRect((int)paddle.x, (int)paddle.y-10, 5, 10);
+            g.fillRect((int)paddle.x+paddle.width-5, (int)paddle.y-10, 5, 10);
+            bulletDelay -= deltaS;
+            if(bulletDelay <= 0.0D) {
+                bullets.add(new Bullet(paddle.x-4, paddle.y-10));
+                bullets.add(new Bullet(paddle.x+paddle.width-4, paddle.y-10));
+                bulletDelay = 0.5D;
+            }
+        }
 
         if(debugMode) {
             g.setColor(Color.orange);
@@ -295,6 +348,10 @@ public class GameScreen extends Screen {
                     newBalls.add(new Ball(paddle.x + (paddle.width / 2.0D) - 10, 400, (Math.random()-0.5D)*250.0D, 350.0D));
                 }
                 balls.addAll(newBalls);
+            }
+            case SHOOTER -> {
+                shooterTimer = 10.0D;
+                bulletDelay = 0.0D;
             }
         }
     }
