@@ -18,7 +18,9 @@ public class Collectable extends CollideBox {
     public enum CollectableType {
         BIGGER_PADDLE,
         SMALLER_PADDLE,
-        RED_MODE
+        RED_MODE,
+        TRIPPLE_BALLS,
+        SPAWN_NEW_BALLS
     }
 
     private CollectableType randomCollectableType() {

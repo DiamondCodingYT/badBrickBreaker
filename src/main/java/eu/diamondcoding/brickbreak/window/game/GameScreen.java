@@ -6,11 +6,13 @@ import eu.diamondcoding.brickbreak.window.menu.MenuScreen;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class GameScreen extends Screen {
 
-    Ball ball;
+    List<Ball> balls;
     Paddle paddle;
     List<Brick> bricks;
     List<Collectable> collectables;
@@ -23,9 +25,15 @@ public class GameScreen extends Screen {
     private final int[] DEBUG_SEQUENCE = {KeyEvent.VK_UP, KeyEvent.VK_UP, KeyEvent.VK_DOWN, KeyEvent.VK_DOWN, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT};
 
     public GameScreen(int level) {
-        ball = new Ball(250-10, 400, 0, 350.0D);
+        //init balls
+        balls = new ArrayList<>();
+        Ball ball = new Ball(250-10, 400, 0, 350.0D);
+        balls.add(ball);
+        //init paddle
         paddle = new Paddle(250-50);
+        //init bricks
         bricks = LevelConstructor.constructLevel(level);
+        //init collectables
         collectables = new ArrayList<>();
     }
 
@@ -56,12 +64,14 @@ public class GameScreen extends Screen {
                 bricks = LevelConstructor.constructLevel(MenuScreen.level);
             } else if(keyCode == KeyEvent.VK_D) {
                 debugMode = false;
-            } else if(keyCode == KeyEvent.VK_1) {
-                applyCollectable(Collectable.CollectableType.BIGGER_PADDLE);
-            } else if(keyCode == KeyEvent.VK_2) {
-                applyCollectable(Collectable.CollectableType.SMALLER_PADDLE);
-            } else if(keyCode == KeyEvent.VK_3) {
-                applyCollectable(Collectable.CollectableType.RED_MODE);
+            }
+            if(keyCode >= 49/*Key:1*/ && keyCode <= 57/*Key:9*/) {
+                int index = keyCode - 49;
+                Collectable.CollectableType[] colablTypes = Collectable.CollectableType.values();
+                if(index < colablTypes.length) {
+                    Collectable.CollectableType type = colablTypes[index];
+                    applyCollectable(type);
+                }
             }
         }
     }
@@ -82,18 +92,23 @@ public class GameScreen extends Screen {
         }
 
         //Bricks
-        boolean divertDirection = false;
+        Set<Ball> ballsToDivert = new HashSet<>();
         List<Brick> bricksToRemove = new ArrayList<>();
         for (Brick brick : bricks) {
-            if(collides(ball, brick)) {
+            Ball collidedBall = getCollidedBall(brick);
+            if(collidedBall != null) {
                 if(redTime <= 0.0D) { //if not in read mode divert the direction
-                    divertDirection = true;
+                    ballsToDivert.add(collidedBall);
                 }
                 if(!brick.permanent) { //if not a permanent brick
                     bricksToRemove.add(brick); //remove it after for
                     //spawn collectable
-                    if(Math.random() > 0.7D) {
-                        collectables.add(new Collectable(brick.x + brick.width / 2.0D - 10, brick.y + brick.height / 2.0D));
+                    double maxRndVal = 0.6D / (1.5D*collectables.size()+1.0D);
+                    if(Math.random() < maxRndVal) {
+                        Collectable collectable = new Collectable(brick.x + brick.width / 2.0D - 10, brick.y + brick.height / 2.0D);
+                        if(!(collectable.type.equals(Collectable.CollectableType.TRIPPLE_BALLS) && balls.size() >= 15)) { //this would be too many balls
+                            collectables.add(collectable);
+                        }
                     }
                 }
             } else {
@@ -112,7 +127,7 @@ public class GameScreen extends Screen {
                 }
             }
         }
-        if(divertDirection) {
+        for (Ball ball : ballsToDivert) {
             ball.vx *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
             ball.vy *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
         }
@@ -139,6 +154,18 @@ public class GameScreen extends Screen {
                     g.setColor(Color.red);
                     g.drawOval((int) colabl.x + colabl.width/4, (int) colabl.y + colabl.height/4, colabl.width/2, colabl.height/2);
                 }
+                case TRIPPLE_BALLS -> {
+                    g.setColor(Color.white);
+                    g.drawOval((int) colabl.x+colabl.width/4, (int) colabl.y, colabl.width/2, colabl.height/2);
+                    g.drawOval((int) colabl.x, (int) colabl.y+colabl.height/2, colabl.width/2, colabl.height/2);
+                    g.drawOval((int) colabl.x+colabl.width/2, (int) colabl.y+colabl.height/2, colabl.width/2, colabl.height/2);
+                }
+                case SPAWN_NEW_BALLS -> {
+                    g.setColor(Color.green);
+                    g.drawOval((int) colabl.x, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
+                    g.drawOval((int) colabl.x+colabl.width/3, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
+                    g.drawOval((int) colabl.x+(colabl.width/3)*2, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
+                }
             }
             if(collides(paddle, colabl)) {
                 collectablesToRemove.add(colabl);
@@ -148,51 +175,59 @@ public class GameScreen extends Screen {
         collectables.removeAll(collectablesToRemove);
 
         //ball
-        ball.updateLoc(deltaS);
-        if(debugMode) {
-            double predictedX = ball.x + ball.vx * 0.5D;
-            double predictedY = ball.y + ball.vy * 0.5D;
-            g.setColor(Color.blue);
-            g.drawLine((int)ball.x+ball.width/2, (int)ball.y+ball.height/2, (int)predictedX+ball.width/2, (int)predictedY+ball.height/2);
-        }
-        if(redTime > 0) {
-            g.setColor(Color.red);
-            redTime = Math.max(0.0D, redTime-deltaS);
-        } else {
-            g.setColor(Color.white);
-        }
-        g.fillOval((int)ball.x, (int)ball.y, ball.width, ball.height);
-        if(ball.x < 0) {
-            if(ball.vx < 0) {
-                ball.vx*=-1;
+        List<Ball> ballsToRemove = new ArrayList<>();
+        for (Ball ball : balls) {
+            ball.updateLoc(deltaS);
+            if(debugMode) {
+                double predictedX = ball.x + ball.vx * 0.5D;
+                double predictedY = ball.y + ball.vy * 0.5D;
+                g.setColor(Color.blue);
+                g.drawLine((int)ball.x+ball.width/2, (int)ball.y+ball.height/2, (int)predictedX+ball.width/2, (int)predictedY+ball.height/2);
             }
-        } else if(ball.x+ball.width > dimension.width) {
-            if(ball.vx > 0) {
-                ball.vx*=-1;
-            }
-        }
-        if(ball.y <= 0) {
-            if(ball.vy < 0) {
-                ball.vy *= -1;
-            }
-        } else if(collides(ball, paddle)) {
-            double ballCenterX = ball.x + (ball.width / 2.0D);
-            double paddleCenterX = paddle.x + (paddle.width / 2.0D);
-            double xCenterDifference = ballCenterX - paddleCenterX;
-            double xCenterDifferencePercentage = xCenterDifference / (0.5D*paddle.width);
-            if(ball.vy > 0) {
-                ball.vy *= -1;
-                ball.vx = xCenterDifferencePercentage*250.0D;
-            }
-        } else if(ball.y > 650) {
-            if(invincible) {
-                ball.y = 400;
-                ball.x = 240; //paddle.x + paddle.width / 2.0D
-                ball.vx = 0;
+            if(redTime > 0) {
+                g.setColor(Color.red);
+                redTime = Math.max(0.0D, redTime-deltaS);
             } else {
-                //Game Over
-                holder.displayScreen(new MenuScreen(MenuScreen.MenuMessage.GAME_OVER));
+                g.setColor(Color.white);
             }
+            g.fillOval((int)ball.x, (int)ball.y, ball.width, ball.height);
+            if(ball.x < 0) {
+                if(ball.vx < 0) {
+                    ball.vx*=-1;
+                }
+            } else if(ball.x+ball.width > dimension.width) {
+                if(ball.vx > 0) {
+                    ball.vx*=-1;
+                }
+            }
+            if(ball.y <= 0) {
+                if(ball.vy < 0) {
+                    ball.vy *= -1;
+                }
+            } else if(collides(ball, paddle)) {
+                double ballCenterX = ball.x + (ball.width / 2.0D);
+                double paddleCenterX = paddle.x + (paddle.width / 2.0D);
+                double xCenterDifference = ballCenterX - paddleCenterX;
+                double xCenterDifferencePercentage = xCenterDifference / (0.5D*paddle.width);
+                if(ball.vy > 0) {
+                    ball.vy *= -1;
+                    ball.vx = xCenterDifferencePercentage*250.0D;
+                }
+            } else if(ball.y > 650) {
+                if(invincible) {
+                    ball.y = 400;
+                    ball.x = 240; //paddle.x + paddle.width / 2.0D
+                    ball.vx = 0;
+                } else {
+                    ballsToRemove.add(ball);
+                }
+            }
+        }
+        balls.removeAll(ballsToRemove);
+        if(balls.isEmpty()) {
+            //Game Over
+            holder.displayScreen(new MenuScreen(MenuScreen.MenuMessage.GAME_OVER));
+            return; //no need to continue rendering this frame
         }
 
         //paddle
@@ -210,9 +245,10 @@ public class GameScreen extends Screen {
             g.drawString("Press I to toggle invincibly (Currently: "+(invincible ? "on" : "off")+")", 10, 445);
             g.setColor(Color.magenta);
             g.drawString("Apply Collectable Press Number:", 10, 460);
-            g.drawString("  1: BIGGER_PADDLE", 10, 475);
-            g.drawString("  2: SMALLER_PADDLE", 10, 490);
-            g.drawString("  3: RED_MODE", 10, 505);
+            Collectable.CollectableType[] colablTypes = Collectable.CollectableType.values();
+            for (int i = 0; i < colablTypes.length; i++) {
+                g.drawString("  "+(i+1)+": "+colablTypes[i].name(), 10, 475+i*15);
+            }
         }
     }
 
@@ -221,6 +257,15 @@ public class GameScreen extends Screen {
                 box1.x + box1.width > box2.x &&
                 box1.y < box2.y + box2.height &&
                 box1.y + box1.height > box2.y;
+    }
+
+    private Ball getCollidedBall(Brick brick) {
+        for (Ball ball : balls) {
+            if(collides(brick, ball)) {
+                return ball;
+            }
+        }
+        return null;
     }
 
     private void applyCollectable(Collectable.CollectableType type) {
@@ -236,6 +281,21 @@ public class GameScreen extends Screen {
                 }
             }
             case RED_MODE -> redTime = 10.0D;
+            case TRIPPLE_BALLS -> {
+                List<Ball> newBalls = new ArrayList<>();
+                for (Ball ball : balls) {
+                    newBalls.add(new Ball(ball.x, ball.y, (Math.random()-0.5D)*250.0D, ball.vy));
+                    newBalls.add(new Ball(ball.x, ball.y, (Math.random()-0.5D)*250.0D, ball.vy));
+                }
+                balls.addAll(newBalls);
+            }
+            case SPAWN_NEW_BALLS -> {
+                List<Ball> newBalls = new ArrayList<>();
+                for(int i = 0; i < 3; i++) {
+                    newBalls.add(new Ball(paddle.x + (paddle.width / 2.0D) - 10, 400, (Math.random()-0.5D)*250.0D, 350.0D));
+                }
+                balls.addAll(newBalls);
+            }
         }
     }
 
