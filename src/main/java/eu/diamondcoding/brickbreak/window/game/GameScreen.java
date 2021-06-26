@@ -116,20 +116,19 @@ public class GameScreen extends Screen {
                         }
                     }
                 }
-            } else {
-                //draw the brick
-                g.setColor(brick.color);
-                g.fillRect((int)brick.x, (int)brick.y, brick.width, brick.height);
-                if(brick.permanent) {
-                    g.setColor(Color.yellow);
-                    Graphics2D g2 = (Graphics2D) g;
-                    Stroke oldStroke = g2.getStroke();
-                    g2.setStroke(new BasicStroke(1.5F));
-                    g.drawRect((int)brick.x, (int)brick.y, brick.width, brick.height);
-                    g.drawLine((int)brick.x+1, (int)brick.y+1, (int)brick.x+brick.width-2, (int)brick.y+brick.height-2);
-                    g.drawLine((int)brick.x+brick.width-2, (int)brick.y+1, (int)brick.x+1, (int)brick.y+brick.height-2);
-                    g2.setStroke(oldStroke);
-                }
+            }
+            //draw the brick
+            g.setColor(brick.color);
+            g.fillRect((int)brick.x, (int)brick.y, brick.width, brick.height);
+            if(brick.permanent) {
+                g.setColor(Color.yellow);
+                Graphics2D g2 = (Graphics2D) g;
+                Stroke oldStroke = g2.getStroke();
+                g2.setStroke(new BasicStroke(1.5F));
+                g.drawRect((int)brick.x, (int)brick.y, brick.width, brick.height);
+                g.drawLine((int)brick.x+1, (int)brick.y+1, (int)brick.x+brick.width-2, (int)brick.y+brick.height-2);
+                g.drawLine((int)brick.x+brick.width-2, (int)brick.y+1, (int)brick.x+1, (int)brick.y+brick.height-2);
+                g2.setStroke(oldStroke);
             }
         }
         for (Ball ball : ballsToDivert) {
@@ -257,7 +256,7 @@ public class GameScreen extends Screen {
             } else {
                 //find a colliding brick
                 for (Brick brick : bricks) {
-                    if (collides(brick, bullet)) {
+                    if (collides(brick, bullet) && (!brick.permanent)) {
                         bulletsToRemove.add(bullet);
                         bricksToRemove.add(brick);
                         break;

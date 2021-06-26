@@ -74,6 +74,18 @@ public class LevelConstructor {
                                 "_#rr#_#rr#______",
                                 "_#rr#_#rr#______",
                                 "__##___##_______"));
+                break;
+            case 6:
+                bricks.addAll(constructBricksFromStrings(60, 30+10, 30, 20, 10, 10,
+                        "$$$$$$$$$$",
+                        "$gggggggg$",
+                        "$gggggggg$",
+                        "$gggggggg$",
+                        "$$$gggg$$$",
+                        "$gggggggg$",
+                        "$gggggggg$",
+                        "$gggggggg$"));
+                break;
         }
         return bricks;
     }
@@ -85,7 +97,10 @@ public class LevelConstructor {
             String[] chars = line.split("");
             for (int x = 0; x < chars.length; x++) {
                 String c = chars[x];
-                if(!c.equals("_")) {
+                if(c.equals("$")) {
+                    Brick brick = new Brick(startX+x*(width+marginX), startY+y*(height+marginY), width, height, Color.darkGray, Color.yellow, true);
+                    bricks.add(brick);
+                } else if(!c.equals("_")) {
                     Color color = switch (c) {
                         case "w" -> Color.white;
                         case "r" -> Color.red;
