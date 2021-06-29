@@ -98,7 +98,6 @@ public class GameScreen extends Screen {
 
         //Bricks
         Set<Ball> ballsToDivert = new HashSet<>();
-        List<Brick> bricksToRemove = new ArrayList<>();
         for (Brick brick : bricks) {
             Ball collidedBall = getCollidedBall(brick);
             if(collidedBall != null) {
@@ -106,9 +105,9 @@ public class GameScreen extends Screen {
                     ballsToDivert.add(collidedBall);
                 }
                 if(!brick.permanent) { //if not a permanent brick
-                    bricksToRemove.add(brick); //remove it after for
+                    brick.queueRemove(); //remove later
                     //spawn collectable
-                    double maxRndVal = 0.6D / (1.5D*collectables.size()+1.0D);
+                    double maxRndVal = 0.5D / (1.5D*collectables.size()+1.0D);
                     if(Math.random() < maxRndVal) {
                         Collectable collectable = new Collectable(brick.x + brick.width / 2.0D - 10, brick.y + brick.height / 2.0D);
                         if(!(collectable.type.equals(Collectable.CollectableType.TRIPPLE_BALLS) && balls.size() >= 5)) { //this would be too many balls
@@ -118,68 +117,18 @@ public class GameScreen extends Screen {
                 }
             }
             //draw the brick
-            g.setColor(brick.color);
-            g.fillRect((int)brick.x, (int)brick.y, brick.width, brick.height);
-            if(brick.permanent) {
-                g.setColor(Color.yellow);
-                Graphics2D g2 = (Graphics2D) g;
-                Stroke oldStroke = g2.getStroke();
-                g2.setStroke(new BasicStroke(1.5F));
-                g.drawRect((int)brick.x, (int)brick.y, brick.width, brick.height);
-                g.drawLine((int)brick.x+1, (int)brick.y+1, (int)brick.x+brick.width-2, (int)brick.y+brick.height-2);
-                g.drawLine((int)brick.x+brick.width-2, (int)brick.y+1, (int)brick.x+1, (int)brick.y+brick.height-2);
-                g2.setStroke(oldStroke);
-            }
+            brick.draw(g);
         }
         for (Ball ball : ballsToDivert) {
             ball.vx *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
             ball.vy *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
-        }
-        bricks.removeAll(bricksToRemove);
-        //test win
-        if(!bricksToRemove.isEmpty()) {
-            checkWin();
         }
 
         //collectables
         List<Collectable> collectablesToRemove = new ArrayList<>();
         for (Collectable colabl : collectables) {
             colabl.updateLoc(deltaS);
-            switch (colabl.type) {
-                case BIGGER_PADDLE -> {
-                    g.setColor(Color.green);
-                    g.drawRect((int) colabl.x, (int) colabl.y + colabl.height / 4, colabl.width, colabl.height / 3);
-                }
-                case SMALLER_PADDLE -> {
-                    g.setColor(Color.red);
-                    g.drawRect((int) colabl.x, (int) colabl.y + colabl.height / 4, colabl.width, colabl.height / 3);
-                }
-                case RED_MODE -> {
-                    g.setColor(Color.red);
-                    g.drawOval((int) colabl.x + colabl.width/4, (int) colabl.y + colabl.height/4, colabl.width/2, colabl.height/2);
-                }
-                case TRIPPLE_BALLS -> {
-                    g.setColor(Color.white);
-                    g.drawOval((int) colabl.x+colabl.width/4, (int) colabl.y, colabl.width/2, colabl.height/2);
-                    g.drawOval((int) colabl.x, (int) colabl.y+colabl.height/2, colabl.width/2, colabl.height/2);
-                    g.drawOval((int) colabl.x+colabl.width/2, (int) colabl.y+colabl.height/2, colabl.width/2, colabl.height/2);
-                }
-                case SPAWN_NEW_BALLS -> {
-                    g.setColor(Color.green);
-                    g.drawOval((int) colabl.x, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
-                    g.drawOval((int) colabl.x+colabl.width/3, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
-                    g.drawOval((int) colabl.x+(colabl.width/3)*2, (int) colabl.y+colabl.height/6, colabl.width/3, colabl.height/3);
-                }
-                case SHOOTER -> {
-                    g.setColor(Color.white);
-                    //left shooter
-                    g.drawRect((int) colabl.x, (int) colabl.y+4*(colabl.height/6), colabl.width/6, colabl.height/6);
-                    //right shooter
-                    g.drawRect((int) colabl.x+5*(colabl.height/6), (int) colabl.y+4*(colabl.height/6), colabl.width/6, colabl.height/6);
-                    //paddle
-                    g.drawRect((int) colabl.x, (int) colabl.y+5*(colabl.height/6), colabl.width, colabl.height/6);
-                }
-            }
+            colabl.draw(g);
             if(collides(paddle, colabl)) {
                 collectablesToRemove.add(colabl);
                 applyCollectable(colabl.type);
@@ -187,23 +136,15 @@ public class GameScreen extends Screen {
         }
         collectables.removeAll(collectablesToRemove);
 
+        //redTime
+        if(redTime > 0) {
+            redTime = Math.max(0.0D, redTime-deltaS);
+        }
+
         //ball
-        List<Ball> ballsToRemove = new ArrayList<>();
         for (Ball ball : balls) {
             ball.updateLoc(deltaS);
-            if(debugMode) {
-                double predictedX = ball.x + ball.vx * 0.5D;
-                double predictedY = ball.y + ball.vy * 0.5D;
-                g.setColor(Color.blue);
-                g.drawLine((int)ball.x+ball.width/2, (int)ball.y+ball.height/2, (int)predictedX+ball.width/2, (int)predictedY+ball.height/2);
-            }
-            if(redTime > 0) {
-                g.setColor(Color.red);
-                redTime = Math.max(0.0D, redTime-deltaS);
-            } else {
-                g.setColor(Color.white);
-            }
-            g.fillOval((int)ball.x, (int)ball.y, ball.width, ball.height);
+            ball.draw(g, debugMode, (redTime>0));
             if(ball.x < 0) {
                 if(ball.vx < 0) {
                     ball.vx*=-1;
@@ -224,51 +165,36 @@ public class GameScreen extends Screen {
                 double xCenterDifferencePercentage = xCenterDifference / (0.5D*paddle.width);
                 if(ball.vy > 0) {
                     ball.vy *= -1;
-                    ball.vx = xCenterDifferencePercentage*250.0D;
+                    ball.vx = xCenterDifferencePercentage * 250.0D; //maybe add this momentum instead of setting it
                 }
             } else if(ball.y > 650) {
-                if(invincible) {
+                if(debugMode && invincible) {
+                    //rest tp spawning pos
                     ball.y = 400;
-                    ball.x = 240; //paddle.x + paddle.width / 2.0D
+                    ball.x = 240;
                     ball.vx = 0;
                 } else {
-                    ballsToRemove.add(ball);
+                    ball.queueRemove();
                 }
             }
         }
-        balls.removeAll(ballsToRemove);
-        if(balls.isEmpty()) {
-            //Game Over
-            holder.displayScreen(new MenuScreen(MenuScreen.MenuMessage.GAME_OVER));
-            return; //no need to continue rendering this frame
-        }
         
         //bullets
-        bricksToRemove.clear();
-        List<Bullet> bulletsToRemove = new ArrayList<>();
         for (Bullet bullet : bullets) {
-            //draw bullet
             bullet.updateLoc(deltaS);
-            g.setColor(Color.white);
-            g.fillRect((int)bullet.x, (int)bullet.y, bullet.width, bullet.height);
+            bullet.draw(g);
             if(bullet.y <= 0.0D) { //is the bullet out of frame
-                bulletsToRemove.add(bullet);
+                bullet.queueRemove();
             } else {
                 //find a colliding brick
                 for (Brick brick : bricks) {
                     if (collides(brick, bullet) && (!brick.permanent)) {
-                        bulletsToRemove.add(bullet);
-                        bricksToRemove.add(brick);
+                        bullet.queueRemove();
+                        brick.queueRemove();
                         break;
                     }
                 }
             }
-        }
-        bricks.removeAll(bricksToRemove);
-        bullets.removeAll(bulletsToRemove);
-        //test win
-        if(!bricksToRemove.isEmpty()) {
-            checkWin();
         }
 
         //paddle
@@ -284,6 +210,41 @@ public class GameScreen extends Screen {
                 bullets.add(new Bullet(paddle.x+paddle.width-4, paddle.y-10));
                 bulletDelay = 0.5D;
             }
+        }
+
+        //remove remove-queued bricks
+        Set<Brick> bricksToRemove = new HashSet<>();
+        for (Brick brick : bricks) {
+            if(brick.isQueuedForRemove()) {
+                bricksToRemove.add(brick);
+            }
+        }
+        bricks.removeAll(bricksToRemove);
+        if(bricksToRemove.size() > 0) { //if any bricks where remove check for a win
+            checkWin();
+        }
+
+        //remove remove-queued bullets
+        Set<Bullet> bulletsToRemove = new HashSet<>();
+        for (Bullet bullet : bullets) {
+            if(bullet.isQueuedForRemove()) {
+                bulletsToRemove.add(bullet);
+            }
+        }
+        bullets.removeAll(bulletsToRemove);
+
+        //remove remove-queued balls
+        Set<Ball> ballsToRemove = new HashSet<>();
+        for (Ball ball : balls) {
+            if(ball.isQueuedForRemove()) {
+                ballsToRemove.add(ball);
+            }
+        }
+        balls.removeAll(ballsToRemove);
+        if(balls.isEmpty()) {
+            //Game Over
+            holder.displayScreen(new MenuScreen(MenuScreen.MenuMessage.GAME_OVER));
+            return;
         }
 
         if(debugMode) {
