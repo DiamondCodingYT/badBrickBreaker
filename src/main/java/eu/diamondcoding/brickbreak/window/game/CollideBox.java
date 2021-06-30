@@ -12,6 +12,33 @@ public class CollideBox {
         this.height = height;
     }
 
+    public boolean collides(CollideBox otherBox) {
+        return x < otherBox.x + otherBox.width &&
+                x + width > otherBox.x &&
+                y < otherBox.y + otherBox.height &&
+                y + height > otherBox.y;
+    }
+
+    public Point getPoint() {
+        return new Point(x, y);
+    }
+
+    public Point midPoint() {
+        return new Point(
+                x + width/2.0D,
+                y + height/2.0D
+        );
+    }
+
+    public void teleport(Point point) {
+        x = point.getX();
+        y = point.getY();
+    }
+
+    public CollideBox cloneBox() {
+        return new CollideBox(x, y, width, height);
+    }
+
     public String debugBox() {
         return "CollideBox{" +
                 "x=" + x +
@@ -19,6 +46,23 @@ public class CollideBox {
                 ", width=" + width +
                 ", height=" + height +
                 '}';
+    }
+
+    public class Point {
+
+        private final double x, y;
+        public Point(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public double getX() {
+            return x;
+        }
+        public double getY() {
+            return y;
+        }
+
     }
 
 }

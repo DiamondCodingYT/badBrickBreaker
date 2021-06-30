@@ -12,6 +12,7 @@ import java.util.Set;
 
 public class GameScreen extends Screen {
 
+    public static GameScreen instance;
     List<Ball> balls;
     List<Bullet> bullets;
     Paddle paddle;
@@ -28,6 +29,7 @@ public class GameScreen extends Screen {
     private final int[] DEBUG_SEQUENCE = {KeyEvent.VK_UP, KeyEvent.VK_UP, KeyEvent.VK_DOWN, KeyEvent.VK_DOWN, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT};
 
     public GameScreen(int level) {
+        instance = this;
         //init balls
         balls = new ArrayList<>();
         Ball ball = new Ball(250-10, 400, 0, 350.0D);
@@ -97,31 +99,9 @@ public class GameScreen extends Screen {
         }
 
         //Bricks
-        Set<Ball> ballsToDivert = new HashSet<>();
         for (Brick brick : bricks) {
-            Ball collidedBall = getCollidedBall(brick);
-            if(collidedBall != null) {
-                if(redTime <= 0.0D) { //if not in read mode divert the direction
-                    ballsToDivert.add(collidedBall);
-                }
-                if(!brick.permanent) { //if not a permanent brick
-                    brick.queueRemove(); //remove later
-                    //spawn collectable
-                    double maxRndVal = 0.5D / (1.5D*collectables.size()+1.0D);
-                    if(Math.random() < maxRndVal) {
-                        Collectable collectable = new Collectable(brick.x + brick.width / 2.0D - 10, brick.y + brick.height / 2.0D);
-                        if(!(collectable.type.equals(Collectable.CollectableType.TRIPPLE_BALLS) && balls.size() >= 5)) { //this would be too many balls
-                            collectables.add(collectable);
-                        }
-                    }
-                }
-            }
             //draw the brick
             brick.draw(g);
-        }
-        for (Ball ball : ballsToDivert) {
-            ball.vx *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
-            ball.vy *= -1 + 0.1D*(Math.random()-0.5D); //divert from -0.05 to 0.05
         }
 
         //collectables
@@ -175,6 +155,43 @@ public class GameScreen extends Screen {
                     ball.vx = 0;
                 } else {
                     ball.queueRemove();
+                }
+            }
+            //Brick Collision
+            Set<Brick> collidingBricks = ball.getCollidingBricks();
+            CollideBox lastBox;
+            CollideBox.Point ballMidPoint = null;
+            boolean xInverted = false, yInverted = false;
+            if(!collidingBricks.isEmpty()) {
+                lastBox = ball.getLastBox();
+                ballMidPoint = lastBox.midPoint();
+                //if collided tp outside collision
+                ball.teleport(lastBox.getPoint());
+            }
+            for (Brick brick : collidingBricks) {
+                if(!brick.permanent) { //remove none permanent bricks
+                    brick.queueRemove();
+                }
+                //spawn collectable
+                spawnCollectable(brick);
+                if(redTime > 0.0D) continue; //if in redMode no diverting
+                //Divert ball
+                CollideBox.Point brickMidPoint = brick.midPoint();
+                double deltaX = brickMidPoint.getX() - ballMidPoint.getX();
+                double deltaY = brickMidPoint.getY() - ballMidPoint.getY();
+                double absDeltaX = Math.abs(deltaX);
+                double absDeltaY = Math.abs(deltaY);
+                System.out.println("absDeltaX="+absDeltaX+"; absDeltaY="+absDeltaY);
+                if(absDeltaY > absDeltaX) {
+                    if(!xInverted) { //prevent doing it twice
+                        ball.vy *= -1;
+                        xInverted = true;
+                    }
+                } else {
+                    if(!yInverted) { //prevent doing it twice
+                        ball.vx *= -1;
+                        yInverted = true;
+                    }
                 }
             }
         }
@@ -266,19 +283,22 @@ public class GameScreen extends Screen {
     }
 
     private boolean collides(CollideBox box1, CollideBox box2) {
-        return box1.x < box2.x + box2.width &&
-                box1.x + box1.width > box2.x &&
-                box1.y < box2.y + box2.height &&
-                box1.y + box1.height > box2.y;
+        return box1.collides(box2);
+//        return box1.x < box2.x + box2.width &&
+//                box1.x + box1.width > box2.x &&
+//                box1.y < box2.y + box2.height &&
+//                box1.y + box1.height > box2.y;
     }
 
-    private Ball getCollidedBall(Brick brick) {
-        for (Ball ball : balls) {
-            if(collides(brick, ball)) {
-                return ball;
+    private void spawnCollectable(Brick brick) {
+        //spawn collectable
+        double maxRndVal = 0.5D / (1.5D*collectables.size()+1.0D);
+        if(Math.random() < maxRndVal) {
+            Collectable collectable = new Collectable(brick.x + brick.width / 2.0D - 10, brick.y + brick.height / 2.0D);
+            if(!(collectable.type.equals(Collectable.CollectableType.TRIPPLE_BALLS) && balls.size() >= 5)) { //this would be too many balls
+                collectables.add(collectable);
             }
         }
-        return null;
     }
 
     private void applyCollectable(Collectable.CollectableType type) {
